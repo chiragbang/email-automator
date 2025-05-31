@@ -1,6 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { signIn } from 'next-auth/react';  // add this import
 
 export default function SignupPage() {
   const [email, setEmail] = useState('');
@@ -15,6 +16,9 @@ export default function SignupPage() {
     const res = await fetch('/api/register', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
+      headers: {
+        'Content-Type': 'application/json',
+      },
     });
 
     if (res.status === 201) {
@@ -50,6 +54,21 @@ export default function SignupPage() {
           Sign Up
         </button>
       </form>
+
+      {/* Divider */}
+      <div className="flex items-center my-6">
+        <hr className="flex-grow border-gray-300" />
+        <span className="mx-2 text-gray-500">or</span>
+        <hr className="flex-grow border-gray-300" />
+      </div>
+
+      {/* Google Sign-Up / Sign-In Button */}
+    <button
+  onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+  className="w-full bg-red-600 text-white p-2 rounded"
+>
+  Continue with Google
+</button>
     </div>
   );
 }

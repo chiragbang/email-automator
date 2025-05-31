@@ -1,40 +1,92 @@
-// app/api/auth/[...nextauth]/route.js
-
 import NextAuth from 'next-auth';
-import CredentialsProvider from 'next-auth/providers/credentials';
-import dbConnect from '@/lib/dbConnect';
-import User from '@/models/User';
-import bcrypt from 'bcrypt';
+import GoogleProvider from 'next-auth/providers/google';
+import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
+import clientPromise from '@/lib/mongodb';
+
 
 export const authOptions = {
+  adapter: MongoDBAdapter(clientPromise),
   providers: [
-    CredentialsProvider({
-      name: 'Credentials',
-      credentials: {
-        email: { label: "Email", type: "text" },
-        password: { label: "Password", type: "password" },
-      },
-      async authorize(credentials) {
-        await dbConnect();
-        const user = await User.findOne({ email: credentials.email });
-        if (!user) throw new Error('No user found');
-
-        const isValid = await bcrypt.compare(credentials.password, user.password);
-        if (!isValid) throw new Error('Invalid credentials');
-
-        return { id: user._id, email: user.email };
+    GoogleProvider({
+      clientId: process.env.GMAIL_CLIENT_ID,
+      clientSecret: process.env.GMAIL_CLIENT_SECRET,
+      authorization: {
+        params: {
+          scope:
+            'openid email profile https://www.googleapis.com/auth/gmail.send',
+          access_type: 'offline',
+          prompt: 'consent',
+        },
       },
     }),
   ],
-  session: {
-    strategy: 'jwt',
+  // callbacks: {
+  //   async jwt({ token, account }) {
+  //     if (account) {
+  //       token.accessToken = account.access_token;
+  //       token.refreshToken = account.refresh_token;
+  //       token.accessTokenExpires = account.expires_at * 1000;
+  //     }
+  //     return token;
+  //   },
+  //   async session({ session, token }) {
+  //     session.user.accessToken = token.accessToken;
+  //     session.user.refreshToken = token.refreshToken;
+  //     return session;
+  //   },
+  //   async redirect({ url, baseUrl }) {
+  //   return '/dashboard'; // always redirect here
+  // },
+  // },
+
+  callbacks: {
+  // async jwt({ token, account }) {
+  //   if (account) {
+  //     token.accessToken = account.access_token;
+  //     token.refreshToken = account.refresh_token;
+  //     token.accessTokenExpires = account.expires_at * 1000;
+  //     token.user = account.providerAccountId; // store user id here for debugging
+  //   }
+  //   console.log('JWT callback token:', token);
+  //   return token;
+  // },
+  async jwt({ token, account }) {
+  if (account) {
+    return {
+      ...token,
+      accessToken: account.access_token,
+      refreshToken: account.refresh_token,
+      accessTokenExpires: account.expires_at * 1000,
+    };
+  }
+  // Return the previous token for all other cases
+  return token;
+},
+
+  // async session({ session, token }) {
+  //   session.user.accessToken = token.accessToken;
+  //   session.user.refreshToken = token.refreshToken;
+  //   console.log('Session callback session:', session);
+  //   return session;
+  // },
+  async session({ session, token }) {
+  // Safely add tokens only if they exist
+  if (token?.accessToken) {
+    session.user.accessToken = token.accessToken;
+  }
+  if (token?.refreshToken) {
+    session.user.refreshToken = token.refreshToken;
+  }
+  return session;
+},
+  async redirect({ url, baseUrl }) {
+    return '/dashboard';
   },
-  pages: {
-    signIn: '/login',
-  },
+},
   secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
 
+// 👇 These are required!
 export { handler as GET, handler as POST };

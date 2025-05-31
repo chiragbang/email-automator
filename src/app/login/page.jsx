@@ -51,6 +51,21 @@ export default function LoginPage() {
           Login
         </button>
       </form>
+
+      {/* Divider */}
+      <div className="flex items-center my-6">
+        <hr className="flex-grow border-gray-300" />
+        <span className="mx-2 text-gray-500">or</span>
+        <hr className="flex-grow border-gray-300" />
+      </div>
+
+      {/* Google Sign-In Button */}
+      <button
+  onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+  className="w-full bg-blue-600 text-white p-2 rounded"
+>
+  Sign in with Google
+</button>
     </div>
   );
 }
