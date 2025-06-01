@@ -87,18 +87,22 @@ export default function SignupPage() {
   return (
     <div className="min-h-screen flex flex-col md:flex-row">
       {/* Left Image Section */}
-      <div className="relative w-full md:w-1/2 h-64 md:h-auto hidden md:block">
-        <Image
-          src="/signup.png"
-          alt="Sign Up"
-          fill
-          style={{ objectFit: 'cover' }}
-          priority
-        />
-      </div>
+      <div className="w-full md:w-1/2 hidden md:flex items-center justify-center p-6">
+  <div className="rounded-2xl overflow-hidden shadow-lg w-full">
+    <Image
+      src="/signup.png"
+      alt="Sign Up"
+      width={800}
+      height={600}
+      className="object-cover w-full h-full"
+      priority
+    />
+  </div>
+</div>
+
 
       {/* Right Form Section */}
-      <div className="w-full md:w-1/2 flex items-center justify-center px-6 py-10 bg-neutral-100">
+      <div className="w-full md:w-1/2 flex items-center justify-center px-6 py-10 ">
         <div className="max-w-md w-full">
           <Title level={2} className="text-center mb-6">Sign Up</Title>
 
