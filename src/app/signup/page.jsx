@@ -2,9 +2,15 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signIn } from 'next-auth/react';
+import Image from 'next/image';
+import { Form, Input, Button, Alert, Divider, Typography } from 'antd';
+
+const { Title } = Typography;
 
 export default function SignupPage() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
+  const [mobileNumber, setMobileNumber] = useState('');
   const [password, setPassword] = useState('');
   const [otp, setOtp] = useState('');
   const [otpSent, setOtpSent] = useState(false);
@@ -13,7 +19,6 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
-  // Step 1: Send OTP to email
   const sendOtp = async () => {
     setError('');
     setMessage('');
@@ -27,7 +32,7 @@ export default function SignupPage() {
       const res = await fetch('/api/send-otp', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email: email.trim() }),
       });
 
       if (res.ok) {
@@ -43,14 +48,12 @@ export default function SignupPage() {
     setLoading(false);
   };
 
-  // Step 2: Handle registration with OTP and password
-  const handleSignup = async (e) => {
-    e.preventDefault();
+  const handleSignup = async () => {
     setError('');
     setMessage('');
 
-    if (!otp || !password) {
-      setError('Please enter OTP and password.');
+    if (!name.trim() || !mobileNumber.trim() || !otp.trim() || !password) {
+      setError('Please complete all fields.');
       return;
     }
 
@@ -59,7 +62,13 @@ export default function SignupPage() {
       const res = await fetch('/api/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password, otp }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password,
+          otp: otp.trim(),
+          name: name.trim(),
+          mobileNumber: mobileNumber.trim(),
+        }),
       });
 
       if (res.status === 201) {
@@ -76,85 +85,124 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-20 p-6 border rounded shadow-sm">
-      <h2 className="text-2xl font-semibold mb-6 text-center">Sign Up</h2>
-
-      {error && <p className="text-red-600 mb-4">{error}</p>}
-      {message && <p className="text-green-600 mb-4">{message}</p>}
-
-      {!otpSent ? (
-        <>
-          <input
-            type="email"
-            placeholder="Email"
-            className="w-full p-3 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={email}
-            onChange={(e) => setEmail(e.target.value.trim())}
-            disabled={loading}
-            required
-          />
-          <button
-            onClick={sendOtp}
-            className={`w-full p-3 rounded text-white ${
-              loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-            disabled={!email || loading}
-          >
-            {loading ? 'Sending OTP...' : 'Send OTP'}
-          </button>
-        </>
-      ) : (
-        <form onSubmit={handleSignup}>
-          <input
-            type="email"
-            value={email}
-            disabled
-            className="w-full p-3 border rounded mb-4 bg-gray-100 cursor-not-allowed"
-          />
-          <input
-            type="text"
-            placeholder="Enter OTP"
-            className="w-full p-3 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={otp}
-            onChange={(e) => setOtp(e.target.value.trim())}
-            required
-            disabled={loading}
-          />
-          <input
-            type="password"
-            placeholder="Password"
-            className="w-full p-3 border rounded mb-6 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            disabled={loading}
-          />
-          <button
-            type="submit"
-            className={`w-full p-3 rounded text-white ${
-              loading ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-            disabled={!otp || !password || loading}
-          >
-            {loading ? 'Registering...' : 'Complete Sign Up'}
-          </button>
-        </form>
-      )}
-
-      {/* Divider */}
-      <div className="flex items-center my-6">
-        <hr className="flex-grow border-gray-300" />
-        <span className="mx-3 text-gray-500 font-medium">or</span>
-        <hr className="flex-grow border-gray-300" />
+    <div className="min-h-screen flex flex-col md:flex-row">
+      {/* Left Image Section */}
+      <div className="relative w-full md:w-1/2 h-64 md:h-auto hidden md:block">
+        <Image
+          src="/signup.png"
+          alt="Sign Up"
+          fill
+          style={{ objectFit: 'cover' }}
+          priority
+        />
       </div>
 
-      {/* Google Sign-In */}
-      <button
-        onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
-        className="w-full p-3 rounded bg-red-600 text-white hover:bg-red-700 transition"
-      >
-        Continue with Google
-      </button>
+      {/* Right Form Section */}
+      <div className="w-full md:w-1/2 flex items-center justify-center px-6 py-10 bg-neutral-100">
+        <div className="max-w-md w-full">
+          <Title level={2} className="text-center mb-6">Sign Up</Title>
+
+          {error && <Alert message={error} type="error" showIcon className="mb-4" />}
+          {message && <Alert message={message} type="success" showIcon className="mb-4" />}
+
+          {!otpSent ? (
+            <Form layout="vertical" onFinish={sendOtp}>
+              <Form.Item
+                label="Name"
+                rules={[{ required: true, message: 'Please enter your name!' }]}
+              >
+                <Input
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  disabled={loading}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Email"
+                rules={[{ required: true, message: 'Please enter your email!' }]}
+              >
+                <Input
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={loading}
+                />
+              </Form.Item>
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  loading={loading}
+                  disabled={!email.trim()}
+                >
+                  Send OTP
+                </Button>
+              </Form.Item>
+            </Form>
+          ) : (
+            <Form layout="vertical" onFinish={handleSignup}>
+              <Form.Item label="Email">
+                <Input value={email} disabled className="bg-gray-100" />
+              </Form.Item>
+              <Form.Item
+                label="OTP"
+                rules={[{ required: true, message: 'Please enter the OTP!' }]}
+              >
+                <Input
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value)}
+                  disabled={loading}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Phone Number"
+                rules={[{ required: true, message: 'Please enter your number!' }]}
+              >
+                <Input
+                  value={mobileNumber}
+                  onChange={(e) => setMobileNumber(e.target.value)}
+                  disabled={loading}
+                />
+              </Form.Item>
+
+              <Form.Item
+                label="Password"
+                rules={[{ required: true, message: 'Please enter your password!' }]}
+              >
+                <Input.Password
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={loading}
+                />
+              </Form.Item>
+              <Form.Item>
+                <Button
+                  type="primary"
+                  htmlType="submit"
+                  block
+                  loading={loading}
+                  disabled={!name.trim() || !mobileNumber.trim() || !otp.trim() || !password}
+                >
+                  Complete Sign Up
+                </Button>
+              </Form.Item>
+            </Form>
+          )}
+
+          <Divider>or</Divider>
+
+          <Button
+            type="default"
+            danger
+            block
+            onClick={() => signIn('google', { callbackUrl: '/dashboard' })}
+          >
+            Continue with Google
+          </Button>
+        </div>
+      </div>
     </div>
   );
 }

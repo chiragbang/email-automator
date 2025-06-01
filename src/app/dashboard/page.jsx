@@ -33,7 +33,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="p-6">
-      <h1 className="text-2xl">Welcome, {session.user.email} 👋</h1>
+      <h1 className="text-2xl">Welcome, {session.user.name} 👋</h1>
     </div>
   );
 }

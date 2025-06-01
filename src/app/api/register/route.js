@@ -56,9 +56,9 @@ import bcrypt from 'bcrypt';
 import { otpStore } from '../send-otp/route';
 
 export async function POST(req) {
-  const { email, password, otp } = await req.json();
+  const { name, email, mobileNumber, password, otp } = await req.json();
 
-  if (!email || !password || !otp) return new Response('Missing fields', { status: 400 });
+  if (!name || !email || !mobileNumber || !password || !otp) return new Response('Missing fields', { status: 400 });
 
   // Verify OTP first by calling verify API internally or duplicating the logic here
   // To avoid code duplication, call the verify function here directly or check OTP in your store.
@@ -76,7 +76,7 @@ export async function POST(req) {
   if (userExists) return new Response('User already exists', { status: 400 });
 
   const hashedPassword = await bcrypt.hash(password, 10);
-  const user = await User.create({ email, password: hashedPassword });
+  const user = await User.create({name, email, mobileNumber, password: hashedPassword });
 
   // Remove OTP after successful registration
   delete otpStore[email];
