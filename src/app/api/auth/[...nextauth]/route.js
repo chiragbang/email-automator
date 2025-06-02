@@ -1,92 +1,87 @@
-import NextAuth from 'next-auth';
-import GoogleProvider from 'next-auth/providers/google';
-import { MongoDBAdapter } from '@next-auth/mongodb-adapter';
-import clientPromise from '@/lib/mongodb';
-
+import NextAuth from "next-auth";
+import GoogleProvider from "next-auth/providers/google";
+import CredentialsProvider from "next-auth/providers/credentials";
+import { MongoDBAdapter } from "@next-auth/mongodb-adapter";
+import clientPromise from "@/lib/mongodb";
+import User from "@/models/User";
+import dbConnect from "@/lib/dbConnect";
+import bcrypt from "bcrypt";
 
 export const authOptions = {
   adapter: MongoDBAdapter(clientPromise),
+
   providers: [
+    // Google OAuth provider
     GoogleProvider({
       clientId: process.env.GMAIL_CLIENT_ID,
       clientSecret: process.env.GMAIL_CLIENT_SECRET,
       authorization: {
         params: {
           scope:
-            'openid email profile https://www.googleapis.com/auth/gmail.send',
-          access_type: 'offline',
-          prompt: 'consent',
+            "openid email profile https://www.googleapis.com/auth/gmail.send",
+          access_type: "offline",
+          prompt: "consent",
         },
       },
     }),
+
+    // Credentials provider for email/password login
+    CredentialsProvider({
+      name: "Credentials",
+      credentials: {
+        email: { label: "Email", type: "email", placeholder: "email@example.com" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
+        await dbConnect();
+
+        // Find user by email
+        const user = await User.findOne({ email: credentials.email });
+        if (!user) {
+          return null; // No user found
+        }
+
+        // Check password
+        const isValid = await bcrypt.compare(credentials.password, user.password);
+        if (!isValid) {
+          return null; // Invalid password
+        }
+
+        // Return user object
+        return {
+          id: user._id.toString(),
+          name: user.name,
+          email: user.email,
+        };
+      },
+    }),
   ],
-  // callbacks: {
-  //   async jwt({ token, account }) {
-  //     if (account) {
-  //       token.accessToken = account.access_token;
-  //       token.refreshToken = account.refresh_token;
-  //       token.accessTokenExpires = account.expires_at * 1000;
-  //     }
-  //     return token;
-  //   },
-  //   async session({ session, token }) {
-  //     session.user.accessToken = token.accessToken;
-  //     session.user.refreshToken = token.refreshToken;
-  //     return session;
-  //   },
-  //   async redirect({ url, baseUrl }) {
-  //   return '/dashboard'; // always redirect here
-  // },
-  // },
 
   callbacks: {
-  // async jwt({ token, account }) {
-  //   if (account) {
-  //     token.accessToken = account.access_token;
-  //     token.refreshToken = account.refresh_token;
-  //     token.accessTokenExpires = account.expires_at * 1000;
-  //     token.user = account.providerAccountId; // store user id here for debugging
-  //   }
-  //   console.log('JWT callback token:', token);
-  //   return token;
-  // },
-  async jwt({ token, account }) {
-  if (account) {
-    return {
-      ...token,
-      accessToken: account.access_token,
-      refreshToken: account.refresh_token,
-      accessTokenExpires: account.expires_at * 1000,
-    };
-  }
-  // Return the previous token for all other cases
-  return token;
-},
+    async jwt({ token, user, account }) {
+      // First time jwt callback after sign in
+      if (user) {
+        token.id = user.id;
+      }
+      return token;
+    },
 
-  // async session({ session, token }) {
-  //   session.user.accessToken = token.accessToken;
-  //   session.user.refreshToken = token.refreshToken;
-  //   console.log('Session callback session:', session);
-  //   return session;
-  // },
-  async session({ session, token }) {
-  // Safely add tokens only if they exist
-  if (token?.accessToken) {
-    session.user.accessToken = token.accessToken;
-  }
-  if (token?.refreshToken) {
-    session.user.refreshToken = token.refreshToken;
-  }
-  return session;
-},
-  async redirect({ url, baseUrl }) {
-    return '/dashboard';
+    async session({ session, token }) {
+      if (token && session.user) {
+        session.user.id = token.id;
+      }
+      return session;
+    },
+
+    async redirect({ url, baseUrl }) {
+      // Redirect all logins to dashboard
+      return '/dashboard';
+    },
   },
-},
+
   secret: process.env.NEXTAUTH_SECRET,
 };
 
 const handler = NextAuth(authOptions);
 
-// 👇 These are required!
 export { handler as GET, handler as POST };
